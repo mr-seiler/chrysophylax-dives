@@ -2,28 +2,30 @@
 turnLeft = true
 turnRight = not turnLeft
 
+segl = 10
+
 # define absolute directions;
 # north and south jump values inverted for canvas coords
 directions = {
     "NORTH": {
         onLeft: "WEST",
         onRight: "EAST",
-        jump: {x: 0, y: -1}
+        jump: {x: 0, y: -segl}
     },
     "SOUTH": {
         onLeft: "EAST",
         onRight: "WEST",
-        jump: {x: 0, y: 1}
+        jump: {x: 0, y: segl}
     },
     "EAST": {
         onLeft: "NORTH",
         onRight: "SOUTH",
-        jump: {x: 1, y: 0}
+        jump: {x: segl, y: 0}
     },
     "WEST": {
         onLeft: "SOUTH",
         onRight: "NORTH",
-        jump: {x: -1, y: 0}
+        jump: {x: -segl, y: 0}
     }
 }
 
@@ -59,7 +61,7 @@ makePointGenerator = (initialPoint, initialDir) ->
 getPoints = (turnArray) ->
     # start with the first two points
     firstPoint = makePoint(0, 0)
-    secondPoint = makePoint(-1, 0)
+    secondPoint = makePoint(-segl, 0)
     initialDir = "WEST"
 
     # callable generator
@@ -121,8 +123,8 @@ getDimenSpec = (pointArray) ->
 # given N, return an array describing the turns the dragon path should take
 # returns the path as an array of boolean true for left, false for right
 getTurns = (n) ->
-    if n == 1
-        return [ turnLeft ]
+    if n == 0
+        return []
     else
         # recur
         leftPart = getTurns(n - 1)
@@ -132,17 +134,46 @@ getTurns = (n) ->
 
 
 # main dragon drawing function
+# FIXME obviously, this needs to be decomposed
 drawCurve = (n) ->
     n = Number(n)
-    n = 10 if n > 10
-    # draw the curve here
-    temp = getPoints(getTurns(n))
-    console.log(temp)
-    dimenSpec = getDimenSpec(temp)
-    console.log(dimenSpec.width())
-    console.log(dimenSpec.height())
+    n = 20 if n > 20
 
+    # get array of point coordinates
+    points = getPoints(getTurns(n))
+    dimenSpec = getDimenSpec(points)
 
+    # figure out the width and height of the viewport -
+    # we'll use this as the maximum for the canvas size
+    # (minus some padding)
+    maxWidth = window.innerWidth - 50
+    maxHeight = window.innerHeight - 50
+
+    # we also need to translate the points so they are all on the canvas
+    movex = movey = 0.5
+    movex = movex + (0 - dimenSpec.min.x) if dimenSpec.min.x < 0
+    movey = movey + (0 - dimenSpec.min.y) if dimenSpec.min.y < 0
+
+    #  get the canvas and draw stuff
+    canvas = document.getElementById("dragon")
+    canvas.width = maxWidth
+    canvas.height = maxHeight
+
+    ctx = canvas.getContext("2d")
+
+    # canvas transforms should be more efficient than trying
+    # to translate/scale points in the array, right?
+    if movex > 0 or movey > 0
+        ctx.translate(movex, movey)
+
+    ctx.beginPath()
+    ctx.moveTo(points[0].x, points[0].y)
+    ctx.lineTo(pt.x, pt.y) for pt in points[1..]
+
+    ctx.strokeStyle = "black"
+    ctx.stroke()
+
+    return "yikes"
 
 
 # register key event listener on text input so we can act when the enter key is pressed
