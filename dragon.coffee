@@ -1,3 +1,11 @@
+# Ideas:
+# - Option for segment length and size canvas to drawing, not other way
+# - when using squares, optionally fill the path (would that work?)
+# - arcTo to draw curved path instead of squares
+# - experiment with different stroke styles (color gradient?)
+# - color options (path and background)
+# - fix text input size
+
 # define relative directions
 turnLeft = true
 turnRight = not turnLeft
@@ -75,31 +83,14 @@ getPoints = (turnArray) ->
 
     return points
 
-# create a new point array with all the point coordinates multiplied by a scalar
-scalePoints = (pointArray, scalar = 0) ->
-    # helper function creates a new, scaled point
-    scalePoint = (pt) ->
-        return makePoint(pt.x * scalar, pt.y * scalar)
-
-    return (scalePoint(point, scalar) for point in pointArray)
-
-
-# create a new point array with each point translated by a specified x and y amount
-translatePoints = (pointArray, x = 0, y = 0) ->
-    # helper function creates a new, translated point
-    translatePt = (pt) ->
-        return makePoint(pt.x + x, pt.y + y)
-    # return map comprehension
-    return (translatePt(point) for point in pointArray)
-
 
 # Reutrns an object containing maximum and minumum x and y values
 # from the array of points as well as functions to calculate the
 # width and height of the set of points
 getDimenSpec = (pointArray) ->
     spec = {
-        max: { x: 0, y: 0 },
-        min: { x: 0, y: 0 },
+        max: { x: undefined, y: undefined },
+        min: { x: undefined, y: undefined },
         width: (() ->
             return @max.x - @min.x),
         height: (() ->
@@ -108,10 +99,10 @@ getDimenSpec = (pointArray) ->
 
     # helper function to update max and min in the spec from a point
     updateMaxMin = (point) ->
-        spec.max.x = point.x if point.x > spec.max.x
-        spec.max.y = point.y if point.y > spec.max.y
-        spec.min.x = point.x if point.x < spec.max.x
-        spec.min.y = point.y if point.y < spec.min.y
+        spec.max.x = point.x if point.x > spec.max.x or spec.max.x == undefined
+        spec.max.y = point.y if point.y > spec.max.y or spec.max.y == undefined
+        spec.min.x = point.x if point.x < spec.min.x or spec.min.x == undefined
+        spec.min.y = point.y if point.y < spec.min.y or spec.min.y == undefined
         return true
 
     # use comprehension forEach
@@ -149,11 +140,6 @@ drawCurve = (n) ->
     maxWidth = window.innerWidth - 50
     maxHeight = window.innerHeight - 50
 
-    # we also need to translate the points so they are all on the canvas
-    movex = movey = 0.5
-    movex = movex + (0 - dimenSpec.min.x) if dimenSpec.min.x < 0
-    movey = movey + (0 - dimenSpec.min.y) if dimenSpec.min.y < 0
-
     #  get the canvas and draw stuff
     canvas = document.getElementById("dragon")
     canvas.width = maxWidth
@@ -163,14 +149,27 @@ drawCurve = (n) ->
 
     # canvas transforms should be more efficient than trying
     # to translate/scale points in the array, right?
+
+    # try to move everything into view:
+    console.log(points)
+    console.log(dimenSpec.min.x)
+    console.log(dimenSpec.min.y)
+
+    movex = movey = 0.5
+    movex = movex + (0 - dimenSpec.min.x) if dimenSpec.min.x < 0
+    movey = movey + (0 - dimenSpec.min.y) if dimenSpec.min.y < 0
     if movex > 0 or movey > 0
         ctx.translate(movex, movey)
+
+    # TODO size the canvas to the drawing, not the other way around
 
     ctx.beginPath()
     ctx.moveTo(points[0].x, points[0].y)
     ctx.lineTo(pt.x, pt.y) for pt in points[1..]
 
     ctx.strokeStyle = "black"
+    ctx.lineCap = "round"
+    ctx.lineJoin = "round"
     ctx.stroke()
 
     return "yikes"
