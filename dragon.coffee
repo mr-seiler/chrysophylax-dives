@@ -1,48 +1,49 @@
 # Ideas:
-# - Option for segment length and size canvas to drawing, not other way
 # - when using squares, optionally fill the path (would that work?)
 # - arcTo to draw curved path instead of squares
 # - experiment with different stroke styles (color gradient?)
 # - color options (path and background)
 # - fix text input size
+# - VALIDATION
 
 # define relative directions
 turnLeft = true
 turnRight = not turnLeft
 
-segl = 10
-
 # define absolute directions;
 # north and south jump values inverted for canvas coords
-directions = {
-    "NORTH": {
-        onLeft: "WEST",
-        onRight: "EAST",
-        jump: {x: 0, y: -segl}
-    },
-    "SOUTH": {
-        onLeft: "EAST",
-        onRight: "WEST",
-        jump: {x: 0, y: segl}
-    },
-    "EAST": {
-        onLeft: "NORTH",
-        onRight: "SOUTH",
-        jump: {x: segl, y: 0}
-    },
-    "WEST": {
-        onLeft: "SOUTH",
-        onRight: "NORTH",
-        jump: {x: -segl, y: 0}
+
+makeDirections = (length) ->
+    return {
+        "NORTH": {
+            onLeft: "WEST",
+            onRight: "EAST",
+            jump: {x: 0, y: -length}
+        },
+        "SOUTH": {
+            onLeft: "EAST",
+            onRight: "WEST",
+            jump: {x: 0, y: length}
+        },
+        "EAST": {
+            onLeft: "NORTH",
+            onRight: "SOUTH",
+            jump: {x: length, y: 0}
+        },
+        "WEST": {
+            onLeft: "SOUTH",
+            onRight: "NORTH",
+            jump: {x: -length, y: 0}
+        }
     }
-}
 
 
 makePoint = (xv, yv) ->
     return {x: xv, y: yv}
 
 
-makePointGenerator = (initialPoint, initialDir) ->
+makePointGenerator = (initialPoint, initialDir, slen) ->
+    directions = makeDirections(slen)
     lastPoint = initialPoint
     lastDir = initialDir
 
@@ -66,14 +67,14 @@ makePointGenerator = (initialPoint, initialDir) ->
 # given array of "turns" generate an array of relative points for the path
 # we'll need to translate these later, and possible scale them as well?
 # NOTE THAT THESE ARE IN CANVAS COORDS, so the Y axis is "inverted"
-getPoints = (turnArray) ->
+getPoints = (turnArray, slen) ->
     # start with the first two points
     firstPoint = makePoint(0, 0)
-    secondPoint = makePoint(-segl, 0)
+    secondPoint = makePoint(-slen, 0)
     initialDir = "WEST"
 
     # callable generator
-    nextPoint = makePointGenerator(secondPoint, initialDir)
+    nextPoint = makePointGenerator(secondPoint, initialDir, slen)
 
     # start the aray
     points = [ firstPoint, secondPoint ]
@@ -126,43 +127,41 @@ getTurns = (n) ->
 
 # main dragon drawing function
 # FIXME obviously, this needs to be decomposed
-drawCurve = (n) ->
-    n = Number(n)
+drawCurve = (n, s) ->
+    # this is... primitive
     n = 20 if n > 20
+    s = 10 if s < 2 or s > 20
 
     # get array of point coordinates
-    points = getPoints(getTurns(n))
+    points = getPoints(getTurns(n), s)
     dimenSpec = getDimenSpec(points)
 
     # figure out the width and height of the viewport -
     # we'll use this as the maximum for the canvas size
     # (minus some padding)
-    maxWidth = window.innerWidth - 50
-    maxHeight = window.innerHeight - 50
+    viewWidth = window.innerWidth - 50
+    viewHeight = window.innerHeight - 50
 
     #  get the canvas and draw stuff
     canvas = document.getElementById("dragon")
-    canvas.width = maxWidth
-    canvas.height = maxHeight
 
     ctx = canvas.getContext("2d")
 
     # canvas transforms should be more efficient than trying
     # to translate/scale points in the array, right?
 
-    # try to move everything into view:
-    console.log(points)
-    console.log(dimenSpec.min.x)
-    console.log(dimenSpec.min.y)
+    # size the canvas to the size of the drawing (+5 padding)
+    canvas.width = dimenSpec.width() + 5
+    canvas.height = dimenSpec.height() + 5
 
+    # translate the drawing so negative coords are shifted to >= 0
     movex = movey = 0.5
     movex = movex + (0 - dimenSpec.min.x) if dimenSpec.min.x < 0
     movey = movey + (0 - dimenSpec.min.y) if dimenSpec.min.y < 0
     if movex > 0 or movey > 0
         ctx.translate(movex, movey)
 
-    # TODO size the canvas to the drawing, not the other way around
-
+    # create and draw the path
     ctx.beginPath()
     ctx.moveTo(points[0].x, points[0].y)
     ctx.lineTo(pt.x, pt.y) for pt in points[1..]
@@ -175,11 +174,17 @@ drawCurve = (n) ->
     return "yikes"
 
 
-# register key event listener on text input so we can act when the enter key is pressed
-document.getElementById('input-n').addEventListener("keyup",
-    (event) ->
-        if event.keyCode == 13
-            source = event.target
-            drawCurve(source.value)
+sizeField = document.getElementById('input-size')
+nField = document.getElementById('input-n')
 
-)
+# register key event listener on text input so we can act when the enter key is pressed
+onEnter = (event) ->
+    if event.keyCode == 13
+        # do stuff
+        s = Number(sizeField.value)
+        n = Number(nField.value)
+        drawCurve(n, s)
+
+
+sizeField.addEventListener("keyup", onEnter)
+nField.addEventListener("keyup", onEnter)

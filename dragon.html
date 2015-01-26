@@ -3,11 +3,21 @@
     <head>
         <meta charset='utf-8'/>
         <title>Dragon Curve</title>
+        <style type='text/css'>
+            canvas#dragon {
+                margin: 10px;
+                padding: 5px;
+                border: 1px solid black
+            }
+        </style>
     </head>
     <body>
-        <p>
-        degree: <input type='text' id='input-n' maxlength='2' width='5'/>
-        </p>
+        <div>
+            <form>
+                degree: <input type='text' id='input-n' maxlength='2' width='5'/><br />
+                segment size: <input type='text' id='input-size' maxlength='2' width='5'/>
+            <form>
+        </div>
         <canvas id='dragon'/>
         <script type='text/javascript' src='dragon.js'></script>
     </body>
